@@ -91,7 +91,9 @@ Explanation:
 
     v: Verbose mode (show details)
 
-    p 4444: Listen on port 4444
+    p 
+    
+    4444: Listen on port 4444
 
 💥 Step 8: Trigger the Reverse Shell
 
@@ -111,12 +113,13 @@ Explore the file system to find:
     Useful files for privilege escalation
 
 Start by checking /var/www for the first flag.
+
 🔒 Step 10: Privilege Escalation Using SUID Binaries
+
 What is SUID?
-
 SUID (Set User ID) is a special permission allowing executables to run with the file owner’s privileges (often root).
-
 Attackers scan for SUID binaries to escalate privileges.
+
 🔍 Step 11: Find SUID Files
 
 Run:
@@ -129,7 +132,9 @@ find / -perm -4000 -type f 2>/dev/null
 
 ⚠️ Step 12: Example SUID Exploit - Python
 
-If /usr/bin/python has SUID root permissions, run:
+If /usr/bin/python has SUID root permissions, 
+
+run:
 
 python -c 'import os; os.execl("/bin/sh", "sh", "-p")'
 
