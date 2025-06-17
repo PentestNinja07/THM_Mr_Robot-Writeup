@@ -22,7 +22,7 @@ Which ports are open on this target machine? Which services are running?
 
 🔧 Tool used: **Nmap**
 
-```bash
+
 nmap -sV -O -T4 10.10.220.129
 
 Options explained:
