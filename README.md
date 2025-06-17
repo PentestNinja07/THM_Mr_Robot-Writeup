@@ -102,6 +102,7 @@ Visit the URL where your shell is uploaded:
 http://10.10.145.133/panel/<your_shell_filename>
 
 If everything works, you’ll get a shell prompt on your Netcat listener — you now have command execution on the server!
+
 🔎 Step 9: Manual Enumeration on Target Server
 
 Explore the file system to find:
